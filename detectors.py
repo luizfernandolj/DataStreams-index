@@ -1,7 +1,7 @@
 from timeit import default_timer as timer
 import os
 from skimage.io import imread
-from skimage.measure import compare_mse, compare_ssim
+from skimage.metrics import mean_squared_error, structural_similarity
 import pandas as pd
 import numpy as np
 from random import seed, shuffle
@@ -64,13 +64,13 @@ def IBDD(TRAIN_FILENAME, TEST_FILENAME, window_length, consecutive_values):
 			vet_acc[i] = 1
 
 		recent_data_X.drop(recent_data_X.index[0], inplace=True, axis=0)
-		recent_data_X = recent_data_X.append(test_X.iloc[[i]], ignore_index=True)
+		recent_data_X = pd.concat([recent_data_X, test_X.iloc[[i]]], ignore_index=True)
 		recent_data_y.drop(recent_data_y.index[0], inplace=True, axis=0)
-		recent_data_y = recent_data_y.append(test_y.iloc[[i]], ignore_index=True)
+		recent_data_y = pd.concat([recent_data_y, test_y.iloc[[i]]], ignore_index=True)
 
 		w2 = get_imgdistribution("w2.jpeg", recent_data_X)	
 
-		nrmse.append(compare_mse(w1,w2))
+		nrmse.append(mean_squared_error(w1,w2))
 
 		
 		if (i-lastupdate > 60):
@@ -81,7 +81,7 @@ def IBDD(TRAIN_FILENAME, TEST_FILENAME, window_length, consecutive_values):
 
 		
 
-		if (all(i >= superior_threshold for i in nrmse[-consecutive_values:])):
+		if (all(k >= superior_threshold for k in nrmse[-consecutive_values:])):
 			superior_threshold = nrmse[-1] + np.std(nrmse[-50:-1])
 			inferior_threshold = nrmse[-1] - np.mean(threshold_diffs)
 			threshold_diffs.append(superior_threshold-inferior_threshold)
@@ -89,7 +89,7 @@ def IBDD(TRAIN_FILENAME, TEST_FILENAME, window_length, consecutive_values):
 			model.fit(recent_data_X, recent_data_y)
 			lastupdate = i
 
-		elif (all(i <= inferior_threshold for i in nrmse[-consecutive_values:])):
+		elif (all(k <= inferior_threshold for k in nrmse[-consecutive_values:])):
 			inferior_threshold = nrmse[-1] - np.std(nrmse[-50:-1])
 			superior_threshold = nrmse[-1] + np.mean(threshold_diffs) 
 			threshold_diffs.append(superior_threshold-inferior_threshold) 
@@ -131,7 +131,7 @@ def find_initial_threshold(X_train, window_length, n_runs):
 		w2 = X_train.iloc[sequence[:window_length]].copy()
 		w2.reset_index(drop=True, inplace=True)
 		w2_cv = get_imgdistribution("w2_cv.jpeg", w2)
-		nrmse_cv.append(compare_mse(w1_cv,w2_cv))
+		nrmse_cv.append(mean_squared_error(w1_cv,w2_cv))
 		threshold1 = np.mean(nrmse_cv)+2*np.std(nrmse_cv)
 		threshold2 = np.mean(nrmse_cv)-2*np.std(nrmse_cv)
 	if threshold2 < 0:
@@ -179,9 +179,9 @@ def wrs_test(TRAIN_FILENAME, TEST_FILENAME, window_length, threshold):
 		if prediction == test_y[i]:
 			vet_acc[i] = 1
 		w2.drop(w2.index[0], inplace=True, axis=0) 
-		w2 = w2.append(test_X.iloc[[i]], ignore_index=True) 
+		w2 = pd.concat([w2, test_X.iloc[[i]]], ignore_index=True)
 		w2_labels.drop(w2_labels.index[0], inplace=True, axis=0)
-		w2_labels = w2_labels.append(test_y.iloc[[i]], ignore_index=True)
+		w2_labels = pd.concat([w2_labels, test_y.iloc[[i]]], ignore_index=True)
 
 	    # statistical test for each feature
 		for j in range(0, n_features):
