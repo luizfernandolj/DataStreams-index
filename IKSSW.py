@@ -3,7 +3,7 @@ from collections import deque
 from random import random
 
 class IKSSW:
-  def __init__(self, values_train, values_window):
+  def __init__(self, values):
     '''Incremental Kolmogorov-Smirnov Sliding Window. This class assumes that one window is fixed (reference window) and another slides over a stream of data. The reference window can be updated to be the same as the current sliding window.
 
     Args:
@@ -11,12 +11,12 @@ class IKSSW:
     '''
     self.iks = IKS()
     self.sw = deque()
-    self.reference = [(x, random()) for x in values_train]
+    self.reference = [(x, random()) for x in values]
 
     for val in self.reference:
       self.iks.AddObservation(val, 1)
 
-    for val in values_window:
+    for val in values:
       wrnd = (val, random())
       self.sw.append(wrnd)
       self.iks.AddObservation(wrnd, 2)
