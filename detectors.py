@@ -124,8 +124,8 @@ def IKS(train_data, test_data, window_size, ca=1.1):
     true_labels = test_df.iloc[:, -1].tolist()
     vet_acc = np.zeros(len(test_df))
 
-    if window_size > len(train_df):
-        window_size = len(train_df)
+    if window_size > len(test_df):
+        window_size = len(test_df)
 
     recent_data_X = train_df.iloc[-window_size:, :-1]
     recent_data_y = train_df.iloc[-window_size:, -1]
@@ -134,14 +134,10 @@ def IKS(train_data, test_data, window_size, ca=1.1):
     start = timer()
     for i in range(len(test_df)):
         print('Example {}/{} drifts: {}'.format(i+1, len(test_df), drift_points), end='\r')
-
-        prediction = clf.predict([test_df.iloc[i, :-1].tolist()])
-        if prediction == true_labels[i]:
-            vet_acc[i] = 1
         # Obtenha a instância atual
         current_instance = test_df.iloc[i, :-1].values.tolist()
 
-        recent_data_X = pd.concat([recent_data_X, pd.DataFrame([test_df.iloc[0, :-1].tolist()])], ignore_index=True).iloc[1:]
+        recent_data_X = pd.concat([recent_data_X, pd.DataFrame([test_df.iloc[0, :-1]])], ignore_index=True).iloc[1:]
         recent_data_y = pd.concat([recent_data_y, pd.Series(test_df.iloc[i, -1])], ignore_index=True).iloc[1:]
         # Execute o teste Kolmogorov-Smirnov
         is_drift = ikssw.Test(ca)
@@ -150,6 +146,10 @@ def IKS(train_data, test_data, window_size, ca=1.1):
             ikssw.Update()  # Atualize a janela de referência quando é detectado drift
             # Classificador dar fit na current window mas com os labels verdadeiros
             clf = clf.fit(recent_data_X, recent_data_y)
+
+        prediction = clf.predict([test_df.iloc[i, :-1].tolist()])
+        if prediction == true_labels[i]:
+            vet_acc[i] = 1
         
         # Atualize a janela deslizante
         ikssw.Increment(current_instance)
@@ -205,7 +205,7 @@ def get_imgdistribution(name_file, data):
 
 
 
-def wrs_test(TRAIN_FILENAME, TEST_FILENAME, window_length, threshold):
+def WRS(TRAIN_FILENAME, TEST_FILENAME, window_length, threshold):
 	train_data = pd.read_csv(TRAIN_FILENAME, header=None, index_col=False,sep=',')
 	test_data = pd.read_csv(TEST_FILENAME, header=None, index_col=False,sep=',')
 
